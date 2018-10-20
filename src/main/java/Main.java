@@ -3,8 +3,8 @@ public class Main {
         String crawlerStorageFolder = "Results/";
         int MAX_DEPTH = 1;
         int MAX_THREAD = 7;
-        String url = "http://www.phimmoi.net";
-        MyCrawler crawler = new MyCrawler(url, crawlerStorageFolder, MAX_DEPTH, MAX_THREAD);
+        String url = "http://phimmoi.net";
+        MyCrawler crawler = new MyCrawler(url, crawlerStorageFolder, MAX_DEPTH, MAX_THREAD, false);
         crawler.start();
     }
 }

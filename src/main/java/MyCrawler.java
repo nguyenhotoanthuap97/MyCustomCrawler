@@ -1,10 +1,6 @@
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.net.MalformedURLException;
+import java.io.*;
 import java.net.URL;
+import java.net.URLConnection;
 import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -13,31 +9,38 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import com.panforge.robotstxt.RobotsTxt;
 
 public class MyCrawler {
   private static final Pattern FILTERS = Pattern.compile(".*(\\.(css|js|gif|jpg|png|mp3|zip|gz))$");
+  private static String userAgent = "WebCrawler";
   private static String storageFolder = "Results/";
   private static String baseUrl = "http://";
-  private static int MAX_DEPTH = 0;
-  private static int MAX_THREAD = 1;
+  private static int maxDepth = 0;
+  private static int maxThread = 1;
   private static TreeSet<String> visitedNode = new TreeSet<>();
   private String mainUrl = "";
-  private static String[] schemes = {"http","https"};
+  private static RobotsTxt robotsTxt;
 
-  public MyCrawler(String urlString, String folder, int maxDept, int maxThread){
+    public MyCrawler(String urlString, String folder, int maxDept, int maxThread, boolean fakeUserAgent){
       try {
           mainUrl = urlString;
           storageFolder = folder;
-          MAX_DEPTH = maxDept;
-          MAX_THREAD = maxThread;
+          maxDepth = maxDept;
+          MyCrawler.maxThread = maxThread;
+          if (fakeUserAgent)
+              userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36";
           URL url = new URL(urlString);
           baseUrl += url.getHost() + "/";
           storageFolder += url.getHost();
           new File(storageFolder).mkdirs();
-      } catch (MalformedURLException ex) {
+          URLConnection robotsUrl = new URL(baseUrl + "robots.txt").openConnection();
+          robotsUrl.addRequestProperty("User-Agent", userAgent);
+          robotsTxt = RobotsTxt.read(robotsUrl.getInputStream());
+      } catch (IOException ex) {
           Logger.getLogger(MyCrawler.class.getName()).log(Level.SEVERE, null, ex);
       }
-  }
+    }
 
   public void start(){
       if (mainUrl.charAt(mainUrl.length() - 1) != '/')
@@ -46,14 +49,11 @@ public class MyCrawler {
       visit(mainUrl, 0);
   }
 
-  private void getRobotsFile(){
-      //download file robots.txt and parse to object
-  }
-
   private boolean shouldVisit(String url) {
       String href = url.toLowerCase();
-      //need to check with robots.txt, ignore for now
-      return  (href.length() > 0) && !(href.length() > 128) && !FILTERS.matcher(href).matches() && href.startsWith(href);
+      return (href.length() >= baseUrl.length()) &&
+              robotsTxt.query(userAgent,url) &&
+              !FILTERS.matcher(href).matches() && href.startsWith(href);
   }
 
   private void visit(String url, int nodeIndex) {
@@ -62,11 +62,12 @@ public class MyCrawler {
           System.out.println("nodeIndex: " + nodeIndex);
 
           Document htmlDocument = Jsoup.connect(url)
-                  .userAgent("WebCrawler")
+                  .userAgent(userAgent)
                   .get();
+
           String pageName = baseUrl.equals(url) ? url : url.replace(baseUrl, "");
           saveResult(htmlDocument.text(), pageName);
-          if (nodeIndex < MAX_DEPTH){
+          if (nodeIndex < maxDepth){
               Elements linksElements = htmlDocument.select("a");
               for (Element e: linksElements){
                   String childNode = e.attr("abs:href");
