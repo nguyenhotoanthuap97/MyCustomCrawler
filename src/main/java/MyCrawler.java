@@ -31,12 +31,12 @@ public class MyCrawler {
           if (fakeUserAgent)
               userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36";
           URL url = new URL(urlString);
-          baseUrl += url.getHost() + "/";
-          storageFolder += url.getHost();
-          new File(storageFolder).mkdirs();
-          URLConnection robotsUrl = new URL(baseUrl + "robots.txt").openConnection();
+          URLConnection robotsUrl = new URL("http://" + url.getHost() +"/robots.txt").openConnection();
           robotsUrl.addRequestProperty("User-Agent", userAgent);
           robotsTxt = RobotsTxt.read(robotsUrl.getInputStream());
+          baseUrl += robotsUrl.getURL().getHost() + "/";
+          storageFolder += baseUrl.replaceAll("(^http|https)+://","");
+          new File(storageFolder).mkdirs();
       } catch (IOException ex) {
           Logger.getLogger(MyCrawler.class.getName()).log(Level.SEVERE, null, ex);
       }
@@ -52,8 +52,9 @@ public class MyCrawler {
   private boolean shouldVisit(String url) {
       String href = url.toLowerCase();
       return (href.length() >= baseUrl.length()) &&
+              href.startsWith(baseUrl) &&
               robotsTxt.query(userAgent,url) &&
-              !FILTERS.matcher(href).matches() && href.startsWith(href);
+              !FILTERS.matcher(href).matches();
   }
 
   private void visit(String url, int nodeIndex) {
@@ -82,7 +83,7 @@ public class MyCrawler {
 
   private void saveResult(String result, String pageName){
       try {
-          String filename = pageName.replaceAll("http://", "");
+          String filename = pageName.replaceAll("(^http|https)+://", "");
           int indexQuery = filename.indexOf("?");
           if (indexQuery >= 0)
               filename = filename.substring(0, indexQuery);
