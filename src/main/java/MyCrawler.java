@@ -62,10 +62,7 @@ public class MyCrawler {
           System.out.println("nodeIndex: " + nodeIndex);
 
           Document htmlDocument = Jsoup.connect(url)
-                  .header("Accept","text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8")
-                  .header("Accept-Encoding","gzip, deflate")
-                  .header("Accept-Language","vi,en-US;q=0.9,en;q=0.8")
-                  .header("User-Agent","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36")
+                  .userAgent("WebCrawler")
                   .get();
           String pageName = baseUrl.equals(url) ? url : url.replace(baseUrl, "");
           saveResult(htmlDocument.text(), pageName);
