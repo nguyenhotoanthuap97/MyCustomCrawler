@@ -66,7 +66,7 @@ public class MyCrawler {
                   .userAgent(userAgent)
                   .get();
 
-          String pageName = baseUrl.equals(url) ? url : url.replace(baseUrl, "");
+          String pageName = htmlDocument.select("title").text();
           saveResult(htmlDocument.text(), pageName);
           if (nodeIndex < maxDepth){
               Elements linksElements = htmlDocument.select("a");
@@ -83,13 +83,8 @@ public class MyCrawler {
 
   private void saveResult(String result, String pageName){
       try {
-          String filename = pageName.replaceAll("(^http|https)+://", "");
-          int indexQuery = filename.indexOf("?");
-          if (indexQuery >= 0)
-              filename = filename.substring(0, indexQuery);
-          filename = filename.replaceAll("^/|/$", "");
-          filename = filename.replaceAll("/", "+");
-          BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new  FileOutputStream(storageFolder + "/" + filename + ".txt"),"UTF-8"));
+          String fileName = pageName.replaceAll("[\\\\/:*?\"<>|]", "");
+          BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new  FileOutputStream(storageFolder + "/" + fileName + ".txt"),"UTF-8"));
           bw.write(result);
           bw.flush();
           bw.close();
