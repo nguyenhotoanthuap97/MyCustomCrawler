@@ -1,7 +1,10 @@
 import java.io.*;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.Date;
 import java.util.TreeSet;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
@@ -16,18 +19,20 @@ public class MyCrawler {
   private static String userAgent = "WebCrawler";
   private static String storageFolder = "Results/";
   private static String baseUrl = "http://";
-  private static int maxDepth = 0;
-  private static int maxThread = 1;
+  private static int maxDepth;
   private static TreeSet<String> visitedNode = new TreeSet<>();
   private String mainUrl = "";
   private static RobotsTxt robotsTxt;
+  private static ExecutorService executorService;
+  private static Date lastDownload = new Date();
+  private static long crawlerDelay = 1000;
 
-    public MyCrawler(String urlString, String folder, int maxDept, int maxThread, boolean fakeUserAgent){
+    public MyCrawler(String urlString, String folder, int maxDept, int maxThread, long delay, boolean fakeUserAgent){
       try {
           mainUrl = urlString;
           storageFolder = folder;
           maxDepth = maxDept;
-          MyCrawler.maxThread = maxThread;
+          crawlerDelay = delay;
           if (fakeUserAgent)
               userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36";
           URL url = new URL(urlString);
@@ -37,6 +42,7 @@ public class MyCrawler {
           baseUrl += robotsUrl.getURL().getHost() + "/";
           storageFolder += baseUrl.replaceAll("(^http|https)+://","");
           new File(storageFolder).mkdirs();
+          executorService = Executors.newFixedThreadPool(maxThread);
       } catch (IOException ex) {
           Logger.getLogger(MyCrawler.class.getName()).log(Level.SEVERE, null, ex);
       }
@@ -46,7 +52,7 @@ public class MyCrawler {
       if (mainUrl.charAt(mainUrl.length() - 1) != '/')
           mainUrl += '/';
       visitedNode.add(mainUrl);
-      visit(mainUrl, 0);
+      executorService.execute(() -> visit(mainUrl, 0));
   }
 
   private boolean shouldVisit(String url) {
@@ -57,26 +63,38 @@ public class MyCrawler {
               !FILTERS.matcher(href).matches();
   }
 
+  private synchronized Document download(String url) throws InterruptedException, IOException {
+        Date now = new Date();
+      if((now.getTime() - lastDownload.getTime()) <= crawlerDelay){
+          System.out.println("wait for time :" + (now.getTime() - lastDownload.getTime()));
+          Thread.sleep(crawlerDelay - (now.getTime() - lastDownload.getTime()));
+      }
+      Document htmlDocument = Jsoup.connect(url)
+              .userAgent(userAgent)
+              .get();
+      lastDownload = new Date();
+      return htmlDocument;
+  }
+
   private void visit(String url, int nodeIndex) {
       try {
           System.out.println("url: " + url);
           System.out.println("nodeIndex: " + nodeIndex);
 
-          Document htmlDocument = Jsoup.connect(url)
-                  .userAgent(userAgent)
-                  .get();
+          Document htmlDocument = download(url);
 
           String pageName = htmlDocument.select("title").text();
           saveResult(htmlDocument.text(), pageName);
+
           if (nodeIndex < maxDepth){
               Elements linksElements = htmlDocument.select("a");
               for (Element e: linksElements){
                   String childNode = e.attr("abs:href");
                   if (shouldVisit(childNode) && visitedNode.add(childNode))
-                    visit(childNode, nodeIndex + 1);
+                      executorService.execute(() -> visit(childNode, nodeIndex + 1));
               }
           }
-      } catch (IOException ex) {
+      } catch (InterruptedException | IOException ex) {
           Logger.getLogger(MyCrawler.class.getName()).log(Level.SEVERE, null, ex);
       }
   }
