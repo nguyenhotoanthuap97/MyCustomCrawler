@@ -4,6 +4,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
+import javax.swing.*;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -31,13 +32,15 @@ public class MyCrawler {
   private ExecutorService executorService;
   private static Date lastDownload = new Date();
   private long crawlerDelay = 200;
+  private JTextArea result;
 
-  public MyCrawler(String urlString, String folder, int inputMaxDepth, int maxThread, long delay, boolean fakeUserAgent) {
+  public MyCrawler(String urlString, String folder, int inputMaxDepth, int maxThread, long delay, boolean fakeUserAgent, JTextArea resultPanel) {
     try {
       domain = urlString;
       storageFolder = folder;
       maxDepth = inputMaxDepth;
       crawlerDelay = delay;
+      result = resultPanel;
       if (fakeUserAgent)
         userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36";
       URL url = new URL(urlString);
@@ -45,7 +48,7 @@ public class MyCrawler {
       robotsUrl.addRequestProperty("User-Agent", userAgent);
       robotsTxt = RobotsTxt.read(robotsUrl.getInputStream());
       baseUrl += robotsUrl.getURL().getHost() + "/";
-      storageFolder += baseUrl.replaceAll("(^http|https)+://", "");
+      storageFolder += baseUrl.replaceAll("(^http|https)+://", "").replaceAll("www.", "").split("[.]")[0];
       new File(storageFolder).mkdirs();
       executorService = Executors.newFixedThreadPool(maxThread);
     } catch (IOException ex) {
@@ -84,8 +87,7 @@ public class MyCrawler {
 
   private void visit(String url, int nodeIndex) {
     try {
-      System.out.println("url: " + url);
-      System.out.println("nodeIndex: " + nodeIndex);
+      result.setText("url: " + url + "\nnodeIndex: " + nodeIndex + "\n...");
 
       Document htmlDocument = download(url);
 
