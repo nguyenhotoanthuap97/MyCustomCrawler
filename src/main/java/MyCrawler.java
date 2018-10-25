@@ -33,14 +33,20 @@ public class MyCrawler {
   private static Date lastDownload = new Date();
   private long crawlerDelay = 200;
   private JTextArea result;
+  private JButton startButton;
+  private int lastLevelIndex = -1;
+  private int lastLevelSize = -1;
+  private int subLastLevelIndex = -1;
+  private int subLastLevelSize = -1;
 
-  public MyCrawler(String urlString, String folder, int inputMaxDepth, int maxThread, long delay, boolean fakeUserAgent, JTextArea resultPanel) {
+  public MyCrawler(String urlString, String folder, int inputMaxDepth, int maxThread, long delay, boolean fakeUserAgent, JTextArea resultPanel, JButton startBtn) {
     try {
       domain = urlString;
       storageFolder = folder;
       maxDepth = inputMaxDepth;
       crawlerDelay = delay;
       result = resultPanel;
+      startButton = startBtn;
       if (fakeUserAgent)
         userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36";
       URL url = new URL(urlString);
@@ -48,8 +54,9 @@ public class MyCrawler {
       robotsUrl.addRequestProperty("User-Agent", userAgent);
       robotsTxt = RobotsTxt.read(robotsUrl.getInputStream());
       baseUrl += robotsUrl.getURL().getHost() + "/";
-      storageFolder += baseUrl.replaceAll("(^http|https)+://", "").replaceAll("www.", "").split("[.]")[0];
-      new File(storageFolder).mkdirs();
+      storageFolder += "/" + baseUrl.replaceAll("(^http|https)+://", "").replaceAll("www.", "").split("[.]")[0];
+      new File(storageFolder + "/text").mkdirs();
+      new File(storageFolder + "/html").mkdirs();
       executorService = Executors.newFixedThreadPool(maxThread);
     } catch (IOException ex) {
       Logger.getLogger(MyCrawler.class.getName()).log(Level.SEVERE, null, ex);
@@ -96,10 +103,24 @@ public class MyCrawler {
 
       if (nodeIndex < maxDepth) {
         Elements linksElements = htmlDocument.select("a");
+        if (maxDepth >= 2 && nodeIndex == maxDepth - 2) {
+          subLastLevelSize = linksElements.size();
+        }
+        if (nodeIndex == maxDepth - 1) {
+          subLastLevelIndex++;
+          lastLevelSize = linksElements.size();
+        }
         for (Element e : linksElements) {
           String childNode = e.attr("abs:href");
           if (shouldVisit(childNode) && visitedNode.add(childNode))
             executorService.execute(() -> visit(childNode, nodeIndex + 1));
+        }
+      }
+      else if (subLastLevelIndex == subLastLevelSize - 1 || maxDepth < 2) {
+        lastLevelIndex++;
+        if (lastLevelIndex == lastLevelSize - 1) {
+          JOptionPane.showMessageDialog(null, "Crawling complete!!!");
+          startButton.setEnabled(true);
         }
       }
     } catch (InterruptedException | IOException ex) {
@@ -116,7 +137,7 @@ public class MyCrawler {
     } catch (IOException ex) {
       Logger.getLogger(MyCrawler.class.getName()).log(Level.SEVERE, null, ex);
     }
-    try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(storageFolder + "/html" + fileName + ".html"), "UTF-8"))) {
+    try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(storageFolder + "/html/" + fileName + ".html"), "UTF-8"))) {
       bw.write(htmlResult);
       bw.flush();
       bw.close();

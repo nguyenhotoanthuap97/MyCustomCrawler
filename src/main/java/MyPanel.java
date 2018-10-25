@@ -46,6 +46,7 @@ public class MyPanel extends JPanel {
     gridBagConstraints.gridwidth = 3;
 
     urlTxt.getDocument().putProperty("filterNewlines", Boolean.TRUE);
+    urlTxt.setText("http://");
     urlTxt.setFont(smallFont);
     JScrollPane urlScrollPane = new JScrollPane(urlTxt);
     urlScrollPane.getHorizontalScrollBar().setPreferredSize(new Dimension(0,0));
@@ -138,10 +139,8 @@ public class MyPanel extends JPanel {
         storage = storageTxt.getText();
         politeDelay = Integer.parseInt(delayTxt.getText());
 
-        MyCrawler crawler = new MyCrawler(url, storage, depth, threadCount, politeDelay, false, curCrawlTxt);
+        MyCrawler crawler = new MyCrawler(url, storage, depth, threadCount, politeDelay, false, curCrawlTxt, startBtton);
         crawler.start();
-        JOptionPane.showMessageDialog(null, "Crawling complete!!!");
-        startBtton.setEnabled(true);
       }
     });
     add(startBtton, gridBagConstraints);
