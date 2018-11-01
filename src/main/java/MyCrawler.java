@@ -5,11 +5,8 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import javax.swing.*;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
+import java.io.*;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
@@ -36,23 +33,19 @@ public class MyCrawler {
   private long crawlerDelay = 200;
   private JTextArea result;
   private JButton startButton;
-  /*private int lastLevelIndex = -1;
-  private int lastLevelSize = -1;
-  private int subLastLevelIndex = -1;
-  private int subLastLevelSize = -1;*/
-  private List<Future<?>> futures = new ArrayList<Future<?>>();
   private ExecutorService executorService;
+  private int threadCount = 0;
 
   public MyCrawler(String urlString, String folder, int inputMaxDepth, int maxThread, long delay, boolean fakeUserAgent, JTextArea resultPanel, JButton startBtn) {
-    try {
-      domain = urlString;
-      storageFolder = folder;
-      maxDepth = inputMaxDepth;
-      crawlerDelay = delay;
-      result = resultPanel;
-      startButton = startBtn;
-      if (fakeUserAgent)
-        userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36";
+    domain = urlString;
+    storageFolder = folder;
+    maxDepth = inputMaxDepth;
+    crawlerDelay = delay;
+    result = resultPanel;
+    startButton = startBtn;
+    if (fakeUserAgent)
+      userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36";
+    try{
       URL url = new URL(urlString);
       URLConnection robotsUrl = new URL("http://" + url.getHost() + "/robots.txt").openConnection();
       if (robotsUrl != null) {
@@ -61,42 +54,33 @@ public class MyCrawler {
         baseUrl += robotsUrl.getURL().getHost() + "/";
       }
       else
-      baseUrl += url.getHost() + "/";
-      storageFolder += "/" + baseUrl.replaceAll("(^http|https)+://", "").replaceAll("www.", "").split("[.]")[0];
-      new File(storageFolder + "/text").mkdirs();
-      new File(storageFolder + "/html").mkdirs();
-      executorService = Executors.newFixedThreadPool(maxThread);
-    } catch (IOException ex) {
+        baseUrl += url.getHost() + "/";
+    } catch (IOException ex){
       Logger.getLogger(MyCrawler.class.getName()).log(Level.SEVERE, null, ex);
     }
+    storageFolder += "/" + baseUrl.replaceAll("(^http|https)+://", "").replaceAll("www.", "").split("[.]")[0];
+    new File(storageFolder + "/text").mkdirs();
+    new File(storageFolder + "/html").mkdirs();
+    executorService = Executors.newFixedThreadPool(maxThread);
   }
 
   public void start() {
     if (domain.charAt(domain.length() - 1) != '/')
       domain += '/';
     visitedNode.add(domain);
-    //executorService.execute(() -> visit(domain, 0));
-    futures.add(executorService.submit(() -> visit(domain, 0)));
-    while (true) {
-      boolean allDone = true;
-      for (Future<?> future : futures) {
-        allDone &= future.isDone();
-      }
-      if (allDone) {
-        JOptionPane.showMessageDialog(null, "Crawling complete!!!");
-        startButton.setEnabled(true);
-        break;
-      }
-    }
+    executorService.execute(() -> visit(domain, 0));
+    threadCount += 1;
   }
 
   private boolean shouldVisit(String url) {
     String href = url.toLowerCase();
-    return (href.length() <= 128) &&
+    boolean should = href.length() <= 128 &&
             (href.length() >= baseUrl.length()) &&
-            href.startsWith(baseUrl) &&
-            robotsTxt.query(userAgent, url) &&
+            href.startsWith(baseUrl)&&
             !FILTERS.matcher(href).matches();
+    if (robotsTxt != null)
+      return should && robotsTxt.query(userAgent, url);
+    return should;
   }
 
   private synchronized Document download(String url) throws InterruptedException, IOException {
@@ -123,26 +107,21 @@ public class MyCrawler {
 
       if (nodeIndex < maxDepth) {
         Elements linksElements = htmlDocument.select("a");
-        /*if (maxDepth >= 2 && nodeIndex == maxDepth - 2) {
-          subLastLevelSize = linksElements.size();
-        }
-        if (nodeIndex == maxDepth - 1) {
-          subLastLevelIndex++;
-          lastLevelSize = linksElements.size();
-        }*/
         for (Element e : linksElements) {
           String childNode = e.attr("abs:href");
-          if (shouldVisit(childNode) && visitedNode.add(childNode))
-            futures.add(executorService.submit(() -> visit(childNode, nodeIndex + 1)));
+          if (shouldVisit(childNode) && visitedNode.add(childNode)){
+            executorService.submit(() -> visit(childNode, nodeIndex + 1));
+            threadCount += 1;
+            System.out.println("New thread: " + threadCount);
+          }
         }
       }
-      /*else if (subLastLevelIndex == subLastLevelSize - 1 || maxDepth < 2) {
-        lastLevelIndex++;
-        if (lastLevelIndex == lastLevelSize - 1) {
-          JOptionPane.showMessageDialog(null, "Crawling complete!!!");
-          startButton.setEnabled(true);
-        }
-      }*/
+      threadCount -= 1;
+      System.out.println("Exit thread: " + threadCount);
+      if (threadCount == 0){
+        JOptionPane.showMessageDialog(null, "Crawling complete!!!");
+        startButton.setEnabled(true);
+      }
     } catch (InterruptedException | IOException ex) {
       Logger.getLogger(MyCrawler.class.getName()).log(Level.SEVERE, null, ex);
     }
