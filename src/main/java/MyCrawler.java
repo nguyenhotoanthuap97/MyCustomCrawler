@@ -12,10 +12,13 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.TreeSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
@@ -29,15 +32,16 @@ public class MyCrawler {
   private static TreeSet<String> visitedNode = new TreeSet<>();
   private String domain = "";
   private RobotsTxt robotsTxt;
-  private ExecutorService executorService;
   private static Date lastDownload = new Date();
   private long crawlerDelay = 200;
   private JTextArea result;
   private JButton startButton;
-  private int lastLevelIndex = -1;
+  /*private int lastLevelIndex = -1;
   private int lastLevelSize = -1;
   private int subLastLevelIndex = -1;
-  private int subLastLevelSize = -1;
+  private int subLastLevelSize = -1;*/
+  private List<Future<?>> futures = new ArrayList<Future<?>>();
+  private ExecutorService executorService;
 
   public MyCrawler(String urlString, String folder, int inputMaxDepth, int maxThread, long delay, boolean fakeUserAgent, JTextArea resultPanel, JButton startBtn) {
     try {
@@ -51,9 +55,13 @@ public class MyCrawler {
         userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36";
       URL url = new URL(urlString);
       URLConnection robotsUrl = new URL("http://" + url.getHost() + "/robots.txt").openConnection();
-      robotsUrl.addRequestProperty("User-Agent", userAgent);
-      robotsTxt = RobotsTxt.read(robotsUrl.getInputStream());
-      baseUrl += robotsUrl.getURL().getHost() + "/";
+      if (robotsUrl != null) {
+        robotsUrl.addRequestProperty("User-Agent", userAgent);
+        robotsTxt = RobotsTxt.read(robotsUrl.getInputStream());
+        baseUrl += robotsUrl.getURL().getHost() + "/";
+      }
+      else
+      baseUrl += url.getHost() + "/";
       storageFolder += "/" + baseUrl.replaceAll("(^http|https)+://", "").replaceAll("www.", "").split("[.]")[0];
       new File(storageFolder + "/text").mkdirs();
       new File(storageFolder + "/html").mkdirs();
@@ -67,7 +75,19 @@ public class MyCrawler {
     if (domain.charAt(domain.length() - 1) != '/')
       domain += '/';
     visitedNode.add(domain);
-    executorService.execute(() -> visit(domain, 0));
+    //executorService.execute(() -> visit(domain, 0));
+    futures.add(executorService.submit(() -> visit(domain, 0)));
+    while (true) {
+      boolean allDone = true;
+      for (Future<?> future : futures) {
+        allDone &= future.isDone();
+      }
+      if (allDone) {
+        JOptionPane.showMessageDialog(null, "Crawling complete!!!");
+        startButton.setEnabled(true);
+        break;
+      }
+    }
   }
 
   private boolean shouldVisit(String url) {
@@ -103,26 +123,26 @@ public class MyCrawler {
 
       if (nodeIndex < maxDepth) {
         Elements linksElements = htmlDocument.select("a");
-        if (maxDepth >= 2 && nodeIndex == maxDepth - 2) {
+        /*if (maxDepth >= 2 && nodeIndex == maxDepth - 2) {
           subLastLevelSize = linksElements.size();
         }
         if (nodeIndex == maxDepth - 1) {
           subLastLevelIndex++;
           lastLevelSize = linksElements.size();
-        }
+        }*/
         for (Element e : linksElements) {
           String childNode = e.attr("abs:href");
           if (shouldVisit(childNode) && visitedNode.add(childNode))
-            executorService.execute(() -> visit(childNode, nodeIndex + 1));
+            futures.add(executorService.submit(() -> visit(childNode, nodeIndex + 1)));
         }
       }
-      else if (subLastLevelIndex == subLastLevelSize - 1 || maxDepth < 2) {
+      /*else if (subLastLevelIndex == subLastLevelSize - 1 || maxDepth < 2) {
         lastLevelIndex++;
         if (lastLevelIndex == lastLevelSize - 1) {
           JOptionPane.showMessageDialog(null, "Crawling complete!!!");
           startButton.setEnabled(true);
         }
-      }
+      }*/
     } catch (InterruptedException | IOException ex) {
       Logger.getLogger(MyCrawler.class.getName()).log(Level.SEVERE, null, ex);
     }

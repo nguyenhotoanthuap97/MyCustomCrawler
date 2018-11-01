@@ -3,6 +3,8 @@ import javax.swing.text.DefaultCaret;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 
 public class MyPanel extends JPanel {
   private JTextArea urlTxt = new JTextArea(1, 32);
@@ -48,6 +50,7 @@ public class MyPanel extends JPanel {
     urlTxt.getDocument().putProperty("filterNewlines", Boolean.TRUE);
     urlTxt.setText("http://");
     urlTxt.setFont(smallFont);
+    urlTxt.setCaretPosition(urlTxt.getDocument().getLength());
     JScrollPane urlScrollPane = new JScrollPane(urlTxt);
     urlScrollPane.getHorizontalScrollBar().setPreferredSize(new Dimension(0,0));
     add(urlScrollPane, gridBagConstraints);
@@ -144,5 +147,85 @@ public class MyPanel extends JPanel {
       }
     });
     add(startBtton, gridBagConstraints);
+
+    //Listener for tabstop
+    urlTxt.addKeyListener(new KeyAdapter() {
+      @Override
+      public void keyPressed(KeyEvent e) {
+        if (e.getKeyCode() == KeyEvent.VK_TAB) {
+          if (e.getModifiers() > 0) {
+            urlTxt.transferFocusBackward();
+          } else {
+            urlTxt.transferFocus();
+          }
+          e.consume();
+        }
+      }
+    });
+    storageTxt.addKeyListener(new KeyAdapter() {
+      @Override
+      public void keyPressed(KeyEvent e) {
+        if (e.getKeyCode() == KeyEvent.VK_TAB) {
+          if (e.getModifiers() > 0) {
+            storageTxt.transferFocusBackward();
+          } else {
+            storageTxt.transferFocus();
+          }
+          e.consume();
+        }
+      }
+    });
+    depthTxt.addKeyListener(new KeyAdapter() {
+      @Override
+      public void keyPressed(KeyEvent e) {
+        if (e.getKeyCode() == KeyEvent.VK_TAB) {
+          if (e.getModifiers() > 0) {
+            depthTxt.transferFocusBackward();
+          } else {
+            depthTxt.transferFocus();
+          }
+          e.consume();
+        }
+      }
+    });
+    threadTxt.addKeyListener(new KeyAdapter() {
+      @Override
+      public void keyPressed(KeyEvent e) {
+        if (e.getKeyCode() == KeyEvent.VK_TAB) {
+          if (e.getModifiers() > 0) {
+            threadTxt.transferFocusBackward();
+          } else {
+            threadTxt.transferFocus();
+          }
+          e.consume();
+        }
+      }
+    });
+    delayTxt.addKeyListener(new KeyAdapter() {
+      @Override
+      public void keyPressed(KeyEvent e) {
+        if (e.getKeyCode() == KeyEvent.VK_TAB) {
+          if (e.getModifiers() > 0) {
+            delayTxt.transferFocusBackward();
+          } else {
+            delayTxt.transferFocus();
+          }
+          e.consume();
+        }
+      }
+    });
+    startBtton.addKeyListener(new KeyAdapter() {
+      @Override
+      public void keyPressed(KeyEvent e) {
+        if (e.getKeyCode() == KeyEvent.VK_TAB) {
+          if (e.getModifiers() > 0) {
+            startBtton.transferFocusBackward();
+          } else {
+            startBtton.transferFocus();
+          }
+          e.consume();
+        }
+      }
+    });
   }
 }
