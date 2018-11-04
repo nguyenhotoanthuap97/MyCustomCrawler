@@ -102,9 +102,10 @@ public class MyCrawler {
       return jsoup
               .userAgent(userAgent)
               .get();
-    } catch (NullPointerException e) {
-      System.out.println(String.format("Can't connect to {}", url));
+    } catch (Exception e) {
+      System.out.println(String.format("Can't connect to %s", url));
       threadCount--;
+      System.out.println("Exit eadthread: " + threadCount);
       return null;
     }
   }
@@ -131,11 +132,11 @@ public class MyCrawler {
           }
         }
         threadCount -= 1;
-        System.out.println("Exit thread: " + threadCount);
-        if (threadCount >= 10) {
-          JOptionPane.showMessageDialog(null, "Crawling complete!!!");
-          startButton.setEnabled(true);
-        }
+        System.out.println("Exit eadthread: " + threadCount);
+      }
+      if (threadCount == 0) {
+        JOptionPane.showMessageDialog(null, "Crawling complete!!!");
+        startButton.setEnabled(true);
       }
     } catch (InterruptedException | IOException ex) {
       Logger.getLogger(MyCrawler.class.getName()).log(Level.SEVERE, null, ex);
