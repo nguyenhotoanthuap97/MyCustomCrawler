@@ -132,7 +132,7 @@ public class MyCrawler {
         }
         threadCount -= 1;
         System.out.println("Exit thread: " + threadCount);
-        if (threadCount == 0) {
+        if (threadCount >= 10) {
           JOptionPane.showMessageDialog(null, "Crawling complete!!!");
           startButton.setEnabled(true);
         }
