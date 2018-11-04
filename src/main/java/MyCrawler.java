@@ -1,21 +1,22 @@
 import com.panforge.robotstxt.RobotsTxt;
+import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import javax.swing.*;
-import java.io.*;
-import java.net.MalformedURLException;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.net.URL;
 import java.net.URLConnection;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 import java.util.TreeSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
@@ -45,17 +46,16 @@ public class MyCrawler {
     startButton = startBtn;
     if (fakeUserAgent)
       userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36";
-    try{
+    try {
       URL url = new URL(urlString);
       URLConnection robotsUrl = new URL("http://" + url.getHost() + "/robots.txt").openConnection();
       if (robotsUrl != null) {
         robotsUrl.addRequestProperty("User-Agent", userAgent);
         robotsTxt = RobotsTxt.read(robotsUrl.getInputStream());
         baseUrl += robotsUrl.getURL().getHost() + "/";
-      }
-      else
+      } else
         baseUrl += url.getHost() + "/";
-    } catch (IOException ex){
+    } catch (IOException ex) {
       Logger.getLogger(MyCrawler.class.getName()).log(Level.SEVERE, null, ex);
     }
     storageFolder += "/" + baseUrl.replaceAll("(^http|https)+://", "").replaceAll("www.", "").split("[.]")[0];
@@ -76,7 +76,7 @@ public class MyCrawler {
     String href = url.toLowerCase();
     boolean should = href.length() <= 128 &&
             (href.length() >= baseUrl.length()) &&
-            href.startsWith(baseUrl)&&
+            href.startsWith(baseUrl) &&
             !FILTERS.matcher(href).matches();
     if (robotsTxt != null)
       return should && robotsTxt.query(userAgent, url);
@@ -85,15 +85,28 @@ public class MyCrawler {
 
   private synchronized Document download(String url) throws InterruptedException, IOException {
     Date now = new Date();
-    if ((now.getTime() - lastDownload.getTime()) <= crawlerDelay) {
-      System.out.println("wait for time :" + (now.getTime() - lastDownload.getTime()));
-      wait(crawlerDelay - (now.getTime() - lastDownload.getTime()));
+    try {
+      if ((now.getTime() - lastDownload.getTime()) <= crawlerDelay) {
+        System.out.println("wait for time :" + (now.getTime() - lastDownload.getTime()));
+        wait(crawlerDelay - (now.getTime() - lastDownload.getTime()));
+      }
+      Connection jsoup = Jsoup.connect(url);
+      int retryCount = 0;
+      while (jsoup == null && retryCount < 3) {
+        jsoup = Jsoup.connect(url);
+        retryCount++;
+      }
+      if (jsoup == null)
+        return null;
+      lastDownload = new Date();
+      return jsoup
+              .userAgent(userAgent)
+              .get();
+    } catch (NullPointerException e) {
+      System.out.println(String.format("Can't connect to {}", url));
+      threadCount--;
+      return null;
     }
-    Document htmlDocument = Jsoup.connect(url)
-            .userAgent(userAgent)
-            .get();
-    lastDownload = new Date();
-    return htmlDocument;
   }
 
   private void visit(String url, int nodeIndex) {
@@ -102,25 +115,27 @@ public class MyCrawler {
 
       Document htmlDocument = download(url);
 
-      String pageName = htmlDocument.select("title").text();
-      saveResult(htmlDocument.text(), htmlDocument.html(), pageName);
+      if (htmlDocument != null) {
+        String pageName = htmlDocument.select("title").text();
+        saveResult(htmlDocument.text(), htmlDocument.html(), pageName);
 
-      if (nodeIndex < maxDepth) {
-        Elements linksElements = htmlDocument.select("a");
-        for (Element e : linksElements) {
-          String childNode = e.attr("abs:href");
-          if (shouldVisit(childNode) && visitedNode.add(childNode)){
-            executorService.submit(() -> visit(childNode, nodeIndex + 1));
-            threadCount += 1;
-            System.out.println("New thread: " + threadCount);
+        if (nodeIndex < maxDepth) {
+          Elements linksElements = htmlDocument.select("a");
+          for (Element e : linksElements) {
+            String childNode = e.attr("abs:href");
+            if (shouldVisit(childNode) && visitedNode.add(childNode)) {
+              executorService.submit(() -> visit(childNode, nodeIndex + 1));
+              threadCount += 1;
+              System.out.println("New thread: " + threadCount);
+            }
           }
         }
-      }
-      threadCount -= 1;
-      System.out.println("Exit thread: " + threadCount);
-      if (threadCount == 0){
-        JOptionPane.showMessageDialog(null, "Crawling complete!!!");
-        startButton.setEnabled(true);
+        threadCount -= 1;
+        System.out.println("Exit thread: " + threadCount);
+        if (threadCount == 0) {
+          JOptionPane.showMessageDialog(null, "Crawling complete!!!");
+          startButton.setEnabled(true);
+        }
       }
     } catch (InterruptedException | IOException ex) {
       Logger.getLogger(MyCrawler.class.getName()).log(Level.SEVERE, null, ex);
@@ -129,6 +144,9 @@ public class MyCrawler {
 
   private void saveResult(String txtResult, String htmlResult, String pageName) {
     String fileName = pageName.replaceAll("[\\\\/:*?\"<>|]", "");
+    if (fileName.length() > 100) {
+      fileName = fileName.substring(0, 99);
+    }
     try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(storageFolder + "/text/" + fileName + ".txt"), "UTF-8"))) {
       bw.write(txtResult);
       bw.flush();

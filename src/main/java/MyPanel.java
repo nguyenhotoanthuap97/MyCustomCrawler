@@ -6,14 +6,15 @@ import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 
-public class MyPanel extends JPanel {
+public class MyPanel extends JPanel implements ActionListener {
   private JTextArea urlTxt = new JTextArea(1, 32);
   private JTextArea storageTxt = new JTextArea(1, 15);
+  private JButton pathChoosingBtton = new JButton("Browse...");
   private JTextArea depthTxt = new JTextArea(1, 4);
   private JTextArea threadTxt = new JTextArea(1, 4);
   private JTextArea delayTxt = new JTextArea(1, 4);
   private JTextArea curCrawlTxt = new JTextArea(3, 40);
-  JButton startBtton = new JButton("Start crawling");
+  private JButton startBtton = new JButton("Start crawling");
 
   public String url = "";
   public String storage = "";
@@ -66,9 +67,15 @@ public class MyPanel extends JPanel {
 
     storageTxt.getDocument().putProperty("filterNewlines", Boolean.TRUE);
     storageTxt.setFont(smallFont);
+    storageTxt.setEditable(false);
     JScrollPane storageScrollPane = new JScrollPane(storageTxt);
     storageScrollPane.getHorizontalScrollBar().setPreferredSize(new Dimension(0,0));
     add(storageScrollPane, gridBagConstraints);
+    gridBagConstraints.gridx++;
+
+    gridBagConstraints.gridwidth = 1;
+    pathChoosingBtton.addActionListener(this);
+    add(pathChoosingBtton, gridBagConstraints);
     gridBagConstraints.gridx++;
 
     JLabel jLabel3 = new JLabel();
@@ -227,5 +234,19 @@ public class MyPanel extends JPanel {
         }
       }
     });
+  }
+
+  //folder choosing dialog
+  public void actionPerformed(ActionEvent e) {
+    JFileChooser chooser = new JFileChooser();
+    chooser.setCurrentDirectory(new java.io.File("."));
+    chooser.setDialogTitle("Save directory");
+    chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+    chooser.setAcceptAllFileFilterUsed(false);
+
+    if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+      storage = chooser.getSelectedFile().getPath();
+      storageTxt.setText(chooser.getSelectedFile().getPath());
+    }
   }
 }
