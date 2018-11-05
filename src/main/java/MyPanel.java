@@ -12,7 +12,6 @@ public class MyPanel extends JPanel implements ActionListener {
   private JButton pathChoosingBtton = new JButton("Browse...");
   private JTextArea depthTxt = new JTextArea(1, 4);
   private JTextArea threadTxt = new JTextArea(1, 4);
-  private JTextArea delayTxt = new JTextArea(1, 4);
   private JTextArea curCrawlTxt = new JTextArea(3, 40);
   private JButton startBtton = new JButton("Start crawling");
 
@@ -20,7 +19,6 @@ public class MyPanel extends JPanel implements ActionListener {
   public String storage = "";
   public int depth = 0;
   public int threadCount = 0;
-  public int politeDelay = 0;
 
   public MyPanel() {
     setLayout(new GridBagLayout());
@@ -33,7 +31,7 @@ public class MyPanel extends JPanel implements ActionListener {
     Font bigFont = new Font("Times new roman", 0, 18);
     Font smallFont = new Font("arial", 0, 18);
 
-    gridBagConstraints.gridwidth = 4;
+    gridBagConstraints.gridwidth = 5;
     JLabel jLabel = new JLabel();
     jLabel.setText("Crawler");
     jLabel.setFont(headerFont);
@@ -46,7 +44,7 @@ public class MyPanel extends JPanel implements ActionListener {
     jLabel1.setFont(smallFont);
     add(jLabel1, gridBagConstraints);
     gridBagConstraints.gridx++;
-    gridBagConstraints.gridwidth = 3;
+    gridBagConstraints.gridwidth = 4;
 
     urlTxt.getDocument().putProperty("filterNewlines", Boolean.TRUE);
     urlTxt.setText("http://");
@@ -106,21 +104,8 @@ public class MyPanel extends JPanel implements ActionListener {
     threadScrollPane.getHorizontalScrollBar().setPreferredSize(new Dimension(0,0));
     add(threadScrollPane, gridBagConstraints);
     gridBagConstraints.gridx++;
-
-    JLabel jLabel5 = new JLabel();
-    jLabel5.setFont(smallFont);
-    jLabel5.setText("Polite delay (ms): ");
-    add(jLabel5, gridBagConstraints);
-    gridBagConstraints.gridx++;
-
-    delayTxt.getDocument().putProperty("filterNewlines", Boolean.TRUE);
-    delayTxt.setFont(smallFont);
-    delayTxt.setText("200");
-    JScrollPane delayScrollPane = new JScrollPane(delayTxt);
-    delayScrollPane.getHorizontalScrollBar().setPreferredSize(new Dimension(0,0));
-    add(delayScrollPane, gridBagConstraints);
-    gridBagConstraints.gridy ++;
     gridBagConstraints.gridx = 0;
+    gridBagConstraints.gridy++;
 
     JLabel jLabel6 = new JLabel();
     jLabel6.setFont(smallFont);
@@ -128,7 +113,7 @@ public class MyPanel extends JPanel implements ActionListener {
     add(jLabel6, gridBagConstraints);
     gridBagConstraints.gridy++;
 
-    gridBagConstraints.gridwidth = 4;
+    gridBagConstraints.gridwidth = 5;
     curCrawlTxt.setFont(bigFont);
     curCrawlTxt.setEditable(false);
     JScrollPane curCrawlScrollPane = new JScrollPane(curCrawlTxt);
@@ -137,7 +122,7 @@ public class MyPanel extends JPanel implements ActionListener {
     gridBagConstraints.gridy ++;
     gridBagConstraints.gridx = 0;
 
-    gridBagConstraints.gridwidth = 4;
+    gridBagConstraints.gridwidth = 5;
     startBtton.addActionListener(new ActionListener()
     {
       public void actionPerformed(ActionEvent e)
@@ -147,9 +132,8 @@ public class MyPanel extends JPanel implements ActionListener {
         depth = Integer.parseInt(depthTxt.getText());
         threadCount = Integer.parseInt(threadTxt.getText());
         storage = storageTxt.getText();
-        politeDelay = Integer.parseInt(delayTxt.getText());
 
-        MyCrawler crawler = new MyCrawler(url, storage, depth, threadCount, politeDelay, false, curCrawlTxt, startBtton);
+        MyCrawler crawler = new MyCrawler(url, storage, depth, threadCount, false, curCrawlTxt, startBtton);
         crawler.start();
       }
     });
@@ -203,19 +187,6 @@ public class MyPanel extends JPanel implements ActionListener {
             threadTxt.transferFocusBackward();
           } else {
             threadTxt.transferFocus();
-          }
-          e.consume();
-        }
-      }
-    });
-    delayTxt.addKeyListener(new KeyAdapter() {
-      @Override
-      public void keyPressed(KeyEvent e) {
-        if (e.getKeyCode() == KeyEvent.VK_TAB) {
-          if (e.getModifiers() > 0) {
-            delayTxt.transferFocusBackward();
-          } else {
-            delayTxt.transferFocus();
           }
           e.consume();
         }

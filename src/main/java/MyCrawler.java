@@ -13,7 +13,9 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
 import java.util.TreeSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -23,7 +25,7 @@ import java.util.regex.Pattern;
 
 public class MyCrawler {
   private static final Pattern FILTERS = Pattern.compile(".*(\\.(css|js|gif|jpg|png|mp3|zip|gz))$");
-  private String userAgent = "WebScienceCrawler";
+  private String userAgent = "Yandex";
   private String storageFolder = "Results/";
   private String baseUrl = "http://";
   private int maxDepth;
@@ -31,17 +33,17 @@ public class MyCrawler {
   private String domain = "";
   private RobotsTxt robotsTxt;
   private static Date lastDownload = new Date();
-  private long crawlerDelay = 200;
+  private long crawlerDelay = 0;
   private JTextArea result;
   private JButton startButton;
   private ExecutorService executorService;
   private int threadCount = 0;
 
-  public MyCrawler(String urlString, String folder, int inputMaxDepth, int maxThread, long delay, boolean fakeUserAgent, JTextArea resultPanel, JButton startBtn) {
+  public MyCrawler(String urlString, String folder, int inputMaxDepth, int maxThread, boolean fakeUserAgent, JTextArea resultPanel, JButton startBtn) {
     domain = urlString;
     storageFolder = folder;
     maxDepth = inputMaxDepth;
-    crawlerDelay = delay;
+
     result = resultPanel;
     startButton = startBtn;
     if (fakeUserAgent)
@@ -53,6 +55,41 @@ public class MyCrawler {
         robotsUrl.addRequestProperty("User-Agent", userAgent);
         robotsTxt = RobotsTxt.read(robotsUrl.getInputStream());
         baseUrl += robotsUrl.getURL().getHost() + "/";
+        String robotsStr = robotsTxt.toString();
+        String[] robotsArrays = robotsStr.split("\n");
+        List<String> robotsList = Arrays.asList(robotsArrays);
+        int crawlDelay = -1;
+        for (int i = 0; i < robotsList.size() - 1; i++) {
+          if (robotsList.get(i).toLowerCase().contains(("User-agent: " + userAgent).toLowerCase())) {
+            for (int j = i + 1; j < robotsList.size(); j++) {
+              if (robotsList.get(j).toLowerCase().contains("user-agent")) {
+                break;
+              }
+              if (robotsList.get(j).toLowerCase().contains("crawl-delay:"))   {
+                crawlDelay = Integer.parseInt(robotsList.get(j).split(" ")[1]);
+                break;
+              }
+            }
+            if (crawlDelay >= 0) break;
+          }
+        }
+        if (crawlDelay < 0) {
+          for (int i = 0; i < robotsList.size() - 1; i++) {
+            if (robotsList.get(i).toLowerCase().contains("user-agent: *")) {
+              for (int j = i + 1; j < robotsList.size(); j++) {
+                if (robotsList.get(j).toLowerCase().contains("user-agent")) {
+                  break;
+                }
+                if (robotsList.get(j).toLowerCase().contains("crawl-delay:")) {
+                  crawlDelay = Integer.parseInt(robotsList.get(j).split(" ")[1]);
+                  break;
+                }
+              }
+              if (crawlDelay >= 0) break;
+            }
+          }
+        }
+        crawlerDelay = (crawlDelay == -1) ? 0 : crawlDelay * 1000;
       } else
         baseUrl += url.getHost() + "/";
     } catch (IOException ex) {
