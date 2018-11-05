@@ -14,7 +14,7 @@ public class MyCrawlerGUI {
       form.setVisible(true);
       form.setResizable(false);
       form.setLocationRelativeTo(null);
-      form.setSize(700, 450);
+      form.setSize(700, 600);
     });
   }
 }

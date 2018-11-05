@@ -1,13 +1,22 @@
 import javax.swing.*;
-import javax.swing.text.DefaultCaret;
+import javax.swing.table.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
 
 public class MyPanel extends JPanel implements ActionListener {
   private JTextArea urlTxt = new JTextArea(1, 32);
+  private JButton addServerBtton = new JButton("Add server to crawl");
+  private JButton removeServerBtton = new JButton("Remove");
+  private String[] columnName = {"Server to crawl"};
+  TableModel tableModel = new DefaultTableModel(columnName, 0);
+  private JTable urlList = new JTable(tableModel);
+  private DefaultTableModel model = (DefaultTableModel) urlList.getModel();
   private JTextArea storageTxt = new JTextArea(1, 15);
   private JButton pathChoosingBtton = new JButton("Browse...");
   private JTextArea depthTxt = new JTextArea(1, 4);
@@ -16,6 +25,7 @@ public class MyPanel extends JPanel implements ActionListener {
   private JButton startBtton = new JButton("Start crawling");
 
   public String url = "";
+  public List<String> urlTxtList = new ArrayList<>();
   public String storage = "";
   public int depth = 0;
   public int threadCount = 0;
@@ -25,7 +35,7 @@ public class MyPanel extends JPanel implements ActionListener {
     GridBagConstraints gridBagConstraints = new GridBagConstraints();
     gridBagConstraints.gridx = 0;
     gridBagConstraints.gridy = 0;
-    gridBagConstraints.insets = new Insets(10, 2, 10, 2);
+    gridBagConstraints.insets = new Insets(8, 2, 8, 2);
 
     Font headerFont = new Font("Times new roman", 1, 36);
     Font bigFont = new Font("Times new roman", 0, 18);
@@ -44,15 +54,56 @@ public class MyPanel extends JPanel implements ActionListener {
     jLabel1.setFont(smallFont);
     add(jLabel1, gridBagConstraints);
     gridBagConstraints.gridx++;
-    gridBagConstraints.gridwidth = 4;
 
+    gridBagConstraints.gridwidth = 4;
     urlTxt.getDocument().putProperty("filterNewlines", Boolean.TRUE);
     urlTxt.setText("http://");
     urlTxt.setFont(smallFont);
     urlTxt.setCaretPosition(urlTxt.getDocument().getLength());
     JScrollPane urlScrollPane = new JScrollPane(urlTxt);
-    urlScrollPane.getHorizontalScrollBar().setPreferredSize(new Dimension(0,0));
+    urlScrollPane.getHorizontalScrollBar().setPreferredSize(new Dimension(0, 0));
     add(urlScrollPane, gridBagConstraints);
+    gridBagConstraints.gridy++;
+
+    gridBagConstraints.gridx = 0;
+    gridBagConstraints.gridwidth = 2;
+    removeServerBtton.setEnabled(false);
+    removeServerBtton.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e) {
+        int selectedRow = urlList.getSelectedRow();
+        urlTxtList.remove(selectedRow);
+        model.removeRow(selectedRow);
+        System.out.print(selectedRow);
+        if (urlList.getRowCount() == 0) {
+          removeServerBtton.setEnabled(false);
+        }
+        else urlList.setRowSelectionInterval(0, 0);
+      }
+    });
+    add(removeServerBtton, gridBagConstraints);
+    gridBagConstraints.gridx++;
+
+    gridBagConstraints.gridx = 2;
+    gridBagConstraints.gridwidth = 3;
+    addServerBtton.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e) {
+        removeServerBtton.setEnabled(true);
+        String temp = urlTxt.getText();
+        urlTxtList.add(temp);
+        model.addRow(new Object[]{temp});
+        if (urlList.getRowCount() > 0) urlList.setRowSelectionInterval(0, 0);
+        urlTxt.setText("http://");
+      }
+    });
+    add(addServerBtton, gridBagConstraints);
+    gridBagConstraints.gridy++;
+
+    gridBagConstraints.gridx = 0;
+    gridBagConstraints.gridwidth = 5;
+    JScrollPane urlListScrollPane = new JScrollPane(urlList);
+    urlListScrollPane.setPreferredSize(new Dimension(500, 150));
+    urlListScrollPane.getHorizontalScrollBar().setPreferredSize(new Dimension(0, 0));
+    add(urlListScrollPane, gridBagConstraints);
     gridBagConstraints.gridy++;
 
     gridBagConstraints.gridx = 0;
@@ -67,7 +118,7 @@ public class MyPanel extends JPanel implements ActionListener {
     storageTxt.setFont(smallFont);
     storageTxt.setEditable(false);
     JScrollPane storageScrollPane = new JScrollPane(storageTxt);
-    storageScrollPane.getHorizontalScrollBar().setPreferredSize(new Dimension(0,0));
+    storageScrollPane.getHorizontalScrollBar().setPreferredSize(new Dimension(0, 0));
     add(storageScrollPane, gridBagConstraints);
     gridBagConstraints.gridx++;
 
@@ -86,9 +137,9 @@ public class MyPanel extends JPanel implements ActionListener {
     depthTxt.setFont(smallFont);
     depthTxt.setText("1");
     JScrollPane depthScrollPane = new JScrollPane(depthTxt);
-    depthScrollPane.getHorizontalScrollBar().setPreferredSize(new Dimension(0,0));
+    depthScrollPane.getHorizontalScrollBar().setPreferredSize(new Dimension(0, 0));
     add(depthScrollPane, gridBagConstraints);
-    gridBagConstraints.gridy ++;
+    gridBagConstraints.gridy++;
 
     gridBagConstraints.gridx = 0;
     JLabel jLabel4 = new JLabel();
@@ -101,7 +152,7 @@ public class MyPanel extends JPanel implements ActionListener {
     threadTxt.setFont(smallFont);
     threadTxt.setText("1");
     JScrollPane threadScrollPane = new JScrollPane(threadTxt);
-    threadScrollPane.getHorizontalScrollBar().setPreferredSize(new Dimension(0,0));
+    threadScrollPane.getHorizontalScrollBar().setPreferredSize(new Dimension(0, 0));
     add(threadScrollPane, gridBagConstraints);
     gridBagConstraints.gridx++;
     gridBagConstraints.gridx = 0;
@@ -117,24 +168,23 @@ public class MyPanel extends JPanel implements ActionListener {
     curCrawlTxt.setFont(bigFont);
     curCrawlTxt.setEditable(false);
     JScrollPane curCrawlScrollPane = new JScrollPane(curCrawlTxt);
-    curCrawlScrollPane.getHorizontalScrollBar().setPreferredSize(new Dimension(0,0));
+    curCrawlScrollPane.getHorizontalScrollBar().setPreferredSize(new Dimension(0, 0));
     add(curCrawlScrollPane, gridBagConstraints);
-    gridBagConstraints.gridy ++;
+    gridBagConstraints.gridy++;
     gridBagConstraints.gridx = 0;
 
     gridBagConstraints.gridwidth = 5;
-    startBtton.addActionListener(new ActionListener()
-    {
-      public void actionPerformed(ActionEvent e)
-      {
+    startBtton.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e) {
         startBtton.setEnabled(false);
-        url = urlTxt.getText();
         depth = Integer.parseInt(depthTxt.getText());
         threadCount = Integer.parseInt(threadTxt.getText());
         storage = storageTxt.getText();
 
-        MyCrawler crawler = new MyCrawler(url, storage, depth, threadCount, false, curCrawlTxt, startBtton);
-        crawler.start();
+        urlTxtList.stream().forEach(url -> {
+          MyCrawler crawler = new MyCrawler(url, storage, depth, threadCount, false, curCrawlTxt, startBtton);
+          crawler.start();
+        });
       }
     });
     add(startBtton, gridBagConstraints);

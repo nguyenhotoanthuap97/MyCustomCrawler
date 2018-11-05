@@ -25,7 +25,7 @@ import java.util.regex.Pattern;
 
 public class MyCrawler {
   private static final Pattern FILTERS = Pattern.compile(".*(\\.(css|js|gif|jpg|png|mp3|zip|gz))$");
-  private String userAgent = "Yandex";
+  private String userAgent = "WebScienceProject";
   private String storageFolder = "Results/";
   private String baseUrl = "http://";
   private int maxDepth;
@@ -43,14 +43,13 @@ public class MyCrawler {
     domain = urlString;
     storageFolder = folder;
     maxDepth = inputMaxDepth;
-
     result = resultPanel;
     startButton = startBtn;
     if (fakeUserAgent)
       userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36";
     try {
       URL url = new URL(urlString);
-      URLConnection robotsUrl = new URL("http://" + url.getHost() + "/robots.txt").openConnection();
+      URLConnection robotsUrl = new URL(url.getProtocol() + "://" + url.getHost() + "/robots.txt").openConnection();
       if (robotsUrl != null) {
         robotsUrl.addRequestProperty("User-Agent", userAgent);
         robotsTxt = RobotsTxt.read(robotsUrl.getInputStream());
@@ -89,7 +88,7 @@ public class MyCrawler {
             }
           }
         }
-        crawlerDelay = (crawlDelay == -1) ? 0 : crawlDelay * 1000;
+        crawlerDelay = (crawlDelay == -1) ? 200 : crawlDelay * 1000;
       } else
         baseUrl += url.getHost() + "/";
     } catch (IOException ex) {
@@ -113,7 +112,6 @@ public class MyCrawler {
     String href = url.toLowerCase();
     boolean should = href.length() <= 128 &&
             (href.length() >= baseUrl.length()) &&
-            href.startsWith(baseUrl) &&
             !FILTERS.matcher(href).matches();
     if (robotsTxt != null)
       return should && robotsTxt.query(userAgent, url);
@@ -172,7 +170,7 @@ public class MyCrawler {
         System.out.println("Exit eadthread: " + threadCount);
       }
       if (threadCount == 0) {
-        JOptionPane.showMessageDialog(null, "Crawling complete!!!");
+        JOptionPane.showMessageDialog(null, domain + " crawling complete!!!");
         startButton.setEnabled(true);
       }
     } catch (InterruptedException | IOException ex) {
