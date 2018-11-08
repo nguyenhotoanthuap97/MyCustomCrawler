@@ -39,7 +39,6 @@ public class MyCrawler {
   private JButton startButton;
   private ExecutorService executorService;
   private int threadCount = 0;
-  private int urlCount = 0;
 
   public MyCrawler(String urlString, String folder, int inputMaxDepth, int maxThread, boolean fakeUserAgent, JTextArea resultPanel, JButton startBtn) {
     domain = urlString;
@@ -124,12 +123,6 @@ public class MyCrawler {
     if (robotsTxt != null) {
       should = should && robotsTxt.query(userAgent, url);
     }
-    if (should) {
-      urlCount++;
-      if (urlCount > 1000) {
-        return false;
-      }
-    }
     return should;
   }
 
@@ -172,12 +165,17 @@ public class MyCrawler {
 
         if (nodeIndex < maxDepth) {
           Elements linksElements = htmlDocument.select("a");
+          int crawlLimit = 0;
           for (Element e : linksElements) {
             String childNode = e.attr("abs:href");
             if (shouldVisit(childNode) && visitedNode.add(childNode)) {
               executorService.submit(() -> visit(childNode, nodeIndex + 1));
               threadCount += 1;
               System.out.println("New thread: " + threadCount);
+              crawlLimit++;
+              if (crawlLimit > 1000) {
+                break;
+              }
             }
           }
         }
