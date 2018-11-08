@@ -54,6 +54,7 @@ public class MyCrawler {
       domainHost = url.getHost();
       domainHost = domainHost.replaceAll("www.", "");
       URLConnection robotsUrl = new URL(url.getProtocol() + "://" + url.getHost() + "/robots.txt").openConnection();
+      baseUrl = url.getProtocol() + "://";
       if (robotsUrl != null) {
         robotsUrl.addRequestProperty("User-Agent", userAgent);
         robotsTxt = RobotsTxt.read(robotsUrl.getInputStream());
