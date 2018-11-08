@@ -31,6 +31,7 @@ public class MyCrawler {
   private int maxDepth;
   private static TreeSet<String> visitedNode = new TreeSet<>();
   private String domain = "";
+  private String domainHost = "";
   private RobotsTxt robotsTxt;
   private static Date lastDownload = new Date();
   private long crawlerDelay = 0;
@@ -38,6 +39,7 @@ public class MyCrawler {
   private JButton startButton;
   private ExecutorService executorService;
   private int threadCount = 0;
+  private int urlCount = 0;
 
   public MyCrawler(String urlString, String folder, int inputMaxDepth, int maxThread, boolean fakeUserAgent, JTextArea resultPanel, JButton startBtn) {
     domain = urlString;
@@ -49,6 +51,8 @@ public class MyCrawler {
       userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36";
     try {
       URL url = new URL(urlString);
+      domainHost = url.getHost();
+      domainHost = domainHost.replaceAll("www.", "");
       URLConnection robotsUrl = new URL(url.getProtocol() + "://" + url.getHost() + "/robots.txt").openConnection();
       if (robotsUrl != null) {
         robotsUrl.addRequestProperty("User-Agent", userAgent);
@@ -64,7 +68,7 @@ public class MyCrawler {
               if (robotsList.get(j).toLowerCase().contains("user-agent")) {
                 break;
               }
-              if (robotsList.get(j).toLowerCase().contains("crawl-delay:"))   {
+              if (robotsList.get(j).toLowerCase().contains("crawl-delay:")) {
                 crawlDelay = Integer.parseInt(robotsList.get(j).split(" ")[1]);
                 break;
               }
@@ -94,7 +98,7 @@ public class MyCrawler {
     } catch (IOException ex) {
       Logger.getLogger(MyCrawler.class.getName()).log(Level.SEVERE, null, ex);
     }
-    storageFolder += "/" + baseUrl.replaceAll("(^http|https)+://", "").replaceAll("www.", "").split("[.]")[0];
+    storageFolder += "/" + domainHost;
     new File(storageFolder + "/text").mkdirs();
     new File(storageFolder + "/html").mkdirs();
     executorService = Executors.newFixedThreadPool(maxThread);
@@ -111,10 +115,20 @@ public class MyCrawler {
   private boolean shouldVisit(String url) {
     String href = url.toLowerCase();
     boolean should = href.length() <= 128 &&
-            (href.length() >= baseUrl.length()) &&
+            (href.length() >= domainHost.length()) &&
             !FILTERS.matcher(href).matches();
-    if (robotsTxt != null)
-      return should && robotsTxt.query(userAgent, url);
+    if (!href.contains(domainHost)) {
+      return false;
+    }
+    if (robotsTxt != null) {
+      should = should && robotsTxt.query(userAgent, url);
+    }
+    if (should) {
+      urlCount++;
+      if (urlCount > 1000) {
+        return false;
+      }
+    }
     return should;
   }
 
